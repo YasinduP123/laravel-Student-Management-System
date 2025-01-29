@@ -16,16 +16,25 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
-        dd($request->all());
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:students,email',
-            'phone' => 'required|string|max:10',
-            'address' => 'required|string|max:255',
-        ]);
-
-        $this->student->create($validatedData);
+        $this->student->create($request->all());
 
         return redirect()->back()->with('success', 'Student added successfully!');
+    }
+
+    public function delete($id)
+    {
+
+        $student = $this->student->find($id);
+        $student->delete();
+
+        return redirect()->back()->with('success', 'Student deleted successfully!');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $student = $this->student->find($id);
+        $student->update($request->all());
+
+        return redirect()->back()->with('success', 'Student updated successfully!');
     }
 }

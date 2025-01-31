@@ -12,17 +12,20 @@ Route::get('/students', function () {
         'students' => Student::all()
     ]);
 });
+
 Route::get('/students-edit/{id}', function ($id) {
     // dd( Student::find($id));
     return view('student-edit', [
         'selectedStudents' => Student::find($id)
     ]);
 });
+
+Route::post('/students-find',action: [StudentController::class, 'find']);
 Route::post('/students',  [StudentController::class, 'store'])->name('student.store');
-// Route::get('/button-view/{id}',  [StudentController::class, 'show'])->name('student.edit');
+// Route::get('/button-view',  [StudentController::class, 'show'])->name('student.edit');
 Route::get('/button-delete/{id}',  [StudentController::class, 'delete'])->name('student.delete');
 Route::post('/student/update/{id}', [StudentController::class, 'update'])->name('student.update');
-
+// Route::post('/store-img-to-local-storage', [StudentController::class, 'storeImgToLocalStorage'])->name('student.storeImgToLocalStorage');
 
 Route::middleware([
     'auth:sanctum',

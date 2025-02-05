@@ -4,15 +4,32 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Student;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class StudentController extends Controller
 {
-    protected $student;
-
-    public function __construct(Student $student)
+    public function index()
     {
-        $this->student = $student;
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+        return view('student', [
+            'students' => Student::all()
+        ]);
     }
+
+
+    public function logout(Request $request)
+    {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/');
+    }
+
 
     public function store(Request $request)
     {
@@ -21,7 +38,7 @@ class StudentController extends Controller
             'email' => 'required|string|email|max:255|unique:students',
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:15',
-            'student_image',
+            'student_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5072',
         ]);
 
         $imagePath = null;
@@ -29,63 +46,80 @@ class StudentController extends Controller
             $imagePath = $request->file('student_image')->store('images', 'public');
         }
 
-        $this->student->create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'address' => $request->input('address'),
-            'phone' => $request->input('phone'),
+        Student::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'address' => $request->address,
+            'phone' => $request->phone,
             'student_image' => $imagePath,
         ]);
 
-        return redirect()->back()->with('success', 'Student added successfully!');
+        return redirect()->back()->with('success', value: 'Student added successfully!');
     }
-    // public function storeImgToLocalStorage(Request $request){
-    //     $request->validate([
-    //         'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5072',
-    //     ]);
-    //     $imagePath = $request->file(key: 'student_image')->store('images', 'public');
 
-    //     $student = new Student();
-    //     $student->student_image = $imagePath;
-    //     $student->update($request,$id);
-
-    //     return redirect()->back()->with('success', 'Image uploaded successfully!');
-    // }
-
-    public function delete($id)
+    public function edit($id)
     {
-
-        $student = $this->student->find($id);
-        $student->delete();
-
-        return redirect()->back()->with('success', 'Student deleted successfully!');
+        $student = Student::findOrFail($id);
+        return view('student-edit', compact('student'));
     }
 
     public function update(Request $request, $id)
     {
-        $student = $this->student->find($id);
-        $imagePath = null;
+        $student = Student::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:students,email,' . $id,
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:10',
+            'student_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5072',
+        ]);
+
         if ($request->hasFile('student_image')) {
-            $imagePath = $request->file('student_image')->store('images', 'public');
+            if ($student->student_image) {
+                Storage::disk('public')->delete($student->student_image);
+            }
+            $student->student_image = $request->file('student_image')->store('images', 'public');
         }
-        // dd($imagePath);
 
         $student->update([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'address' => $request->input('address'),
-            'phone' => $request->input('phone'),
-            'student_image' => $imagePath,
+            'name' => $request->name,
+            'email' => $request->email,
+            'address' => $request->address,
+            'phone' => $request->phone,
         ]);
 
         return redirect()->back()->with('success', 'Student updated successfully!');
     }
 
-    public function find(){
-        $id = request(key: 'search');
-        $students = $this->student->find($id);
+    public function delete($id)
+    {
+        $student = Student::findOrFail($id);
 
-        return view('student',['students' => $students]);
+        if ($student->student_image) {
+            Storage::disk('public')->delete($student->student_image);
+        }
+
+        $student->delete();
+
+        return redirect()->back()->with('success', 'Student deleted successfully!');
+    }
+
+    // public function find(Request $request)
+    // {
+    //     $id = $request->input('search');
+    //     $student = Student::find($id);
+
+    //     return view('student', ['students' => $student ? [$student] : []]);
+    // }
+
+    public function findByEmail(Request $request)
+    {
+        $email = $request->input('search');
+        $students = Student::where('email', $email)->get();
+        // dd($students);
+
+        return view('student', ['students' => $students]);
     }
 
 }
